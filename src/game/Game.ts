@@ -10,6 +10,7 @@ import { TrackGenerator } from '../track/TrackGenerator';
 import { TrackMesh } from '../track/TrackMesh';
 import type { TrackData } from '../track/TrackTypes';
 import { VehicleController, type VehicleTuning } from '../vehicle/VehicleController';
+import { loadVehicleTuning, saveVehicleTuning } from '../vehicle/VehicleTuningStorage';
 import { CameraRig } from './CameraRig';
 import { Input } from './Input';
 
@@ -31,15 +32,7 @@ export class Game {
   private debugGui?: DebugGui;
   private hud!: HTMLDivElement;
   private physicsDebug = false;
-  private readonly vehicleTuning: VehicleTuning = {
-    acceleration: 13,
-    brake: 12,
-    steering: 13,
-    lateralGrip: 6.8,
-    drag: 0.9,
-    angularDamping: 4.2,
-    maxSpeed: 28,
-  };
+  private readonly vehicleTuning: VehicleTuning = loadVehicleTuning();
 
   constructor(private root: HTMLElement) {}
 
@@ -71,6 +64,7 @@ export class Game {
       },
       this.cameraRig,
       this.trackGenerator,
+      () => saveVehicleTuning(this.vehicleTuning),
     );
 
     window.addEventListener('resize', this.onResize);

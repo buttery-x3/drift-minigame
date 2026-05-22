@@ -40,11 +40,12 @@ export class TrackMesh {
     const vertices: number[] = [];
     const indices: number[] = [];
     const uvs: number[] = [];
+    const roadY = 0.08;
 
     for (let i = 0; i < track.samples.length; i += 1) {
       const sample = track.samples[i];
-      vertices.push(sample.left.x, 0, sample.left.z);
-      vertices.push(sample.right.x, 0, sample.right.z);
+      vertices.push(sample.left.x, roadY, sample.left.z);
+      vertices.push(sample.right.x, roadY, sample.right.z);
       uvs.push(0, i / 8, 1, i / 8);
     }
 
@@ -63,7 +64,10 @@ export class TrackMesh {
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
-    const material = new THREE.MeshLambertMaterial({ color: 0x4d5351 });
+    const material = new THREE.MeshLambertMaterial({
+      color: 0x8a8d8d,
+      side: THREE.DoubleSide,
+    });
     return new THREE.Mesh(geometry, material);
   }
 
@@ -72,8 +76,8 @@ export class TrackMesh {
     for (let i = 0; i < track.samples.length; i += 1) {
       const next = track.samples[(i + 1) % track.samples.length];
       const sample = track.samples[i];
-      vertices.push(sample.left.x, 0.08, sample.left.z, next.left.x, 0.08, next.left.z);
-      vertices.push(sample.right.x, 0.08, sample.right.z, next.right.x, 0.08, next.right.z);
+      vertices.push(sample.left.x, 0.12, sample.left.z, next.left.x, 0.12, next.left.z);
+      vertices.push(sample.right.x, 0.12, sample.right.z, next.right.x, 0.12, next.right.z);
     }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));

@@ -2,21 +2,26 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import type { Input } from '../game/Input';
 import type { SurfaceSystem } from '../track/SurfaceSystem';
-import { clamp, signedAngleBetween } from '../util/math';
+import {
+  createVehicleState,
+  stepVehiclePhysics,
+  type VehicleState,
+  type VehicleTelemetry,
+  type VehicleTuning,
+} from './VehiclePhysics';
 
-export interface VehicleTuning {
-  acceleration: number;
-  brake: number;
-  steering: number;
-  lateralGrip: number;
-  drag: number;
-  angularDamping: number;
-  maxSpeed: number;
-}
+export type { VehicleTuning } from './VehiclePhysics';
 
 export class VehicleController {
   readonly body: RAPIER.RigidBody;
   readonly mesh: THREE.Group;
+  private model: VehicleState;
+  private telemetry: VehicleTelemetry = {
+    speed: 0,
+    forwardSpeed: 0,
+    lateralSpeed: 0,
+    driftAngle: 0,
+  };
 
   currentSurface = 'road';
   speed = 0;
@@ -29,6 +34,7 @@ export class VehicleController {
     private surfaces: SurfaceSystem,
     readonly tuning: VehicleTuning,
   ) {
+    this.model = createVehicleState(spawn.x, spawn.z, heading);
     this.body = world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(spawn.x, 0.55, spawn.z)
@@ -56,6 +62,13 @@ export class VehicleController {
     this.speed = 0;
     this.driftAngle = 0;
     this.currentSurface = 'road';
+    this.model = createVehicleState(spawn.x, spawn.z, heading);
+    this.telemetry = {
+      speed: 0,
+      forwardSpeed: 0,
+      lateralSpeed: 0,
+      driftAngle: 0,
+    };
     this.sync();
   }
 
@@ -67,69 +80,39 @@ export class VehicleController {
 
     const rotation = this.body.rotation();
     const quaternion = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
-    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(quaternion).normalize();
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion).normalize();
     const velocity = this.body.linvel();
-    const v = new THREE.Vector3(velocity.x, 0, velocity.z);
-    this.speed = v.length();
 
-    const forwardSpeed = v.dot(forward);
-    const lateralSpeed = v.dot(right);
-    const throttle = input.isDown('throttle') ? 1 : 0;
-    const brake = input.isDown('brake') ? 1 : 0;
-    const steer = (input.isDown('left') ? 1 : 0) - (input.isDown('right') ? 1 : 0);
-    const speedFactor = clamp(Math.abs(forwardSpeed) / 18, 0.15, 1.3);
-    const driftFactor = clamp(Math.abs(lateralSpeed) / 10, 0, 1);
+    this.model.x = translation.x;
+    this.model.z = translation.z;
+    this.model.heading = new THREE.Euler().setFromQuaternion(quaternion, 'YXZ').y;
+    this.model.vx = velocity.x;
+    this.model.vz = velocity.z;
+    this.model.yawRate = this.body.angvel().y;
 
-    if (throttle && this.speed < this.tuning.maxSpeed) {
-      this.body.addForce(
-        {
-          x: forward.x * this.tuning.acceleration * surface.acceleration,
-          y: 0,
-          z: forward.z * this.tuning.acceleration * surface.acceleration,
-        },
-        true,
-      );
-    }
+    this.body.resetForces(true);
+    this.body.resetTorques(true);
+    this.telemetry = stepVehiclePhysics(
+      this.model,
+      {
+        throttle: input.isDown('throttle'),
+        brake: input.isDown('brake'),
+        steer: (input.isDown('left') ? 1 : 0) - (input.isDown('right') ? 1 : 0),
+      },
+      this.tuning,
+      surface,
+      dt,
+    );
 
-    if (brake) {
-      this.body.addForce(
-        {
-          x: -forward.x * this.tuning.brake * Math.sign(forwardSpeed || 1),
-          y: 0,
-          z: -forward.z * this.tuning.brake * Math.sign(forwardSpeed || 1),
-        },
-        true,
-      );
-    }
-
-    if (steer !== 0) {
-      this.body.addTorque(
-        {
-          x: 0,
-          y: steer * this.tuning.steering * speedFactor * (1 + driftFactor * 0.35),
-          z: 0,
-        },
-        true,
-      );
-    }
-
-    const lateralImpulse = -lateralSpeed * this.tuning.lateralGrip * surface.lateralGrip * dt;
-    this.body.applyImpulse({ x: right.x * lateralImpulse, y: 0, z: right.z * lateralImpulse }, true);
-
-    const dragImpulse = Math.min(this.speed, this.tuning.drag * surface.drag * this.speed * dt);
-    if (this.speed > 0.001) {
-      const drag = v.normalize().multiplyScalar(-dragImpulse);
-      this.body.applyImpulse({ x: drag.x, y: 0, z: drag.z }, true);
-    }
-
-    const angvel = this.body.angvel();
-    const dampedY =
-      angvel.y * Math.max(0, 1 - this.tuning.angularDamping * surface.angularDamping * dt);
-    this.body.setAngvel({ x: 0, y: dampedY, z: 0 }, true);
+    this.body.setLinvel({ x: this.model.vx, y: 0, z: this.model.vz }, true);
+    this.body.setAngvel({ x: 0, y: this.model.yawRate, z: 0 }, true);
     this.body.setTranslation({ x: translation.x, y: 0.55, z: translation.z }, true);
+    this.body.setRotation(
+      new RAPIER.Quaternion(0, Math.sin(this.model.heading / 2), 0, Math.cos(this.model.heading / 2)),
+      true,
+    );
 
-    this.driftAngle = this.speed > 1 ? signedAngleBetween(forward, v.clone().normalize()) : 0;
+    this.speed = this.telemetry.speed;
+    this.driftAngle = this.telemetry.driftAngle;
   }
 
   sync() {
