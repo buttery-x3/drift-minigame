@@ -1,13 +1,13 @@
 import GUI from 'lil-gui';
 import type { CameraRig } from '../game/CameraRig';
 import type { TrackGenerator } from '../track/TrackGenerator';
-import type { VehicleController } from '../vehicle/VehicleController';
+import type { VehicleTuning } from '../vehicle/VehicleController';
 
 export class DebugGui {
   readonly gui = new GUI({ title: 'Tuning' });
 
   constructor(
-    vehicle: VehicleController,
+    vehicleTuning: VehicleTuning,
     actions: {
       regenerate: () => void;
       reset: () => void;
@@ -18,13 +18,13 @@ export class DebugGui {
     _trackGenerator: TrackGenerator,
   ) {
     const car = this.gui.addFolder('Car');
-    car.add(vehicle.tuning, 'acceleration', 5, 70, 1);
-    car.add(vehicle.tuning, 'brake', 2, 45, 1);
-    car.add(vehicle.tuning, 'steering', 4, 55, 1);
-    car.add(vehicle.tuning, 'lateralGrip', 0.5, 24, 0.1);
-    car.add(vehicle.tuning, 'drag', 0, 3, 0.05);
-    car.add(vehicle.tuning, 'angularDamping', 0, 9, 0.1);
-    car.add(vehicle.tuning, 'maxSpeed', 10, 90, 1);
+    car.add(vehicleTuning, 'acceleration', 2, 45, 1);
+    car.add(vehicleTuning, 'brake', 2, 35, 1);
+    car.add(vehicleTuning, 'steering', 2, 35, 1);
+    car.add(vehicleTuning, 'lateralGrip', 0.5, 20, 0.1);
+    car.add(vehicleTuning, 'drag', 0, 4, 0.05);
+    car.add(vehicleTuning, 'angularDamping', 0, 10, 0.1);
+    car.add(vehicleTuning, 'maxSpeed', 8, 70, 1);
 
     const controls = this.gui.addFolder('Actions');
     controls.add(actions, 'reset').name('Reset car');

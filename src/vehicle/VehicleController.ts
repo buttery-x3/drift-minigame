@@ -17,15 +17,6 @@ export interface VehicleTuning {
 export class VehicleController {
   readonly body: RAPIER.RigidBody;
   readonly mesh: THREE.Group;
-  readonly tuning: VehicleTuning = {
-    acceleration: 31,
-    brake: 19,
-    steering: 24,
-    lateralGrip: 8.5,
-    drag: 0.45,
-    angularDamping: 3.1,
-    maxSpeed: 43,
-  };
 
   currentSurface = 'road';
   speed = 0;
@@ -36,6 +27,7 @@ export class VehicleController {
     spawn: THREE.Vector3,
     heading: number,
     private surfaces: SurfaceSystem,
+    readonly tuning: VehicleTuning,
   ) {
     this.body = world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
@@ -52,6 +44,8 @@ export class VehicleController {
   }
 
   reset(spawn: THREE.Vector3, heading: number) {
+    this.body.resetForces(true);
+    this.body.resetTorques(true);
     this.body.setTranslation({ x: spawn.x, y: 0.55, z: spawn.z }, true);
     this.body.setRotation(
       new RAPIER.Quaternion(0, Math.sin(heading / 2), 0, Math.cos(heading / 2)),
@@ -59,6 +53,10 @@ export class VehicleController {
     );
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    this.speed = 0;
+    this.driftAngle = 0;
+    this.currentSurface = 'road';
+    this.sync();
   }
 
   fixedUpdate(input: Input, dt: number) {

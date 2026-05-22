@@ -47,6 +47,11 @@ export class Input {
     this.pressed.clear();
   }
 
+  clear() {
+    this.down.clear();
+    this.pressed.clear();
+  }
+
   private onKeyDown = (event: KeyboardEvent) => {
     const action = keyMap.get(event.code);
     if (!action) return;

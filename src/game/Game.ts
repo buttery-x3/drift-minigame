@@ -9,7 +9,7 @@ import { TrackColliders } from '../track/TrackColliders';
 import { TrackGenerator } from '../track/TrackGenerator';
 import { TrackMesh } from '../track/TrackMesh';
 import type { TrackData } from '../track/TrackTypes';
-import { VehicleController } from '../vehicle/VehicleController';
+import { VehicleController, type VehicleTuning } from '../vehicle/VehicleController';
 import { CameraRig } from './CameraRig';
 import { Input } from './Input';
 
@@ -31,6 +31,15 @@ export class Game {
   private debugGui?: DebugGui;
   private hud!: HTMLDivElement;
   private physicsDebug = false;
+  private readonly vehicleTuning: VehicleTuning = {
+    acceleration: 13,
+    brake: 12,
+    steering: 13,
+    lateralGrip: 6.8,
+    drag: 0.9,
+    angularDamping: 4.2,
+    maxSpeed: 28,
+  };
 
   constructor(private root: HTMLElement) {}
 
@@ -48,13 +57,16 @@ export class Game {
     this.createHud();
     this.buildWorld();
     this.debugGui = new DebugGui(
-      this.vehicle,
+      this.vehicleTuning,
       {
         regenerate: () => this.buildWorld(),
-        reset: () => this.vehicle.reset(this.track.startPosition, this.track.startHeading),
+        reset: () => this.resetVehicle(),
         cycleCamera: () => this.cameraRig.cycleMode(),
         togglePhysicsDebug: () => {
           this.physicsDebug = !this.physicsDebug;
+          if (!this.physicsDebug) {
+            this.physics.hideDebug(this.scene);
+          }
         },
       },
       this.cameraRig,
@@ -71,6 +83,7 @@ export class Game {
   }
 
   private buildWorld(seed?: number) {
+    this.physics.hideDebug(this.scene);
     this.physics.clear();
     this.clearSceneObjects();
     this.track = this.trackGenerator.generate(seed);
@@ -83,6 +96,7 @@ export class Game {
       this.track.startPosition,
       this.track.startHeading,
       this.surfaces,
+      this.vehicleTuning,
     );
     this.scene.add(this.vehicle.mesh);
     this.spawnCones();
@@ -120,7 +134,7 @@ export class Game {
     const delta = this.clock.getDelta();
 
     if (this.input.wasPressed('reset')) {
-      this.vehicle.reset(this.track.startPosition, this.track.startHeading);
+      this.resetVehicle();
     }
     if (this.input.wasPressed('regenerate')) {
       this.buildWorld();
@@ -143,6 +157,11 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
     this.input.endFrame();
   };
+
+  private resetVehicle() {
+    this.input.clear();
+    this.vehicle.reset(this.track.startPosition, this.track.startHeading);
+  }
 
   private addLights() {
     const hemi = new THREE.HemisphereLight(0xf8f1df, 0x31553a, 1.7);
