@@ -34,7 +34,7 @@ export class VehicleController {
     private surfaces: SurfaceSystem,
     readonly tuning: VehicleTuning,
   ) {
-    this.model = createVehicleState(spawn.x, spawn.z, heading);
+    this.model = createVehicleState(heading);
     this.body = world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(spawn.x, 0.55, spawn.z)
@@ -44,6 +44,8 @@ export class VehicleController {
         .setCanSleep(false)
         .setCcdEnabled(true),
     );
+    this.body.setEnabledTranslations(true, false, true, true);
+    this.body.setEnabledRotations(false, true, false, true);
     world.createCollider(RAPIER.ColliderDesc.cuboid(0.86, 0.32, 1.75).setDensity(1), this.body);
     this.mesh = this.createMesh();
     this.sync();
@@ -62,7 +64,7 @@ export class VehicleController {
     this.speed = 0;
     this.driftAngle = 0;
     this.currentSurface = 'road';
-    this.model = createVehicleState(spawn.x, spawn.z, heading);
+    this.model = createVehicleState(heading);
     this.telemetry = {
       speed: 0,
       forwardSpeed: 0,
@@ -82,8 +84,6 @@ export class VehicleController {
     const quaternion = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
     const velocity = this.body.linvel();
 
-    this.model.x = translation.x;
-    this.model.z = translation.z;
     this.model.heading = new THREE.Euler().setFromQuaternion(quaternion, 'YXZ').y;
     this.model.vx = velocity.x;
     this.model.vz = velocity.z;
@@ -105,11 +105,6 @@ export class VehicleController {
 
     this.body.setLinvel({ x: this.model.vx, y: 0, z: this.model.vz }, true);
     this.body.setAngvel({ x: 0, y: this.model.yawRate, z: 0 }, true);
-    this.body.setTranslation({ x: translation.x, y: 0.55, z: translation.z }, true);
-    this.body.setRotation(
-      new RAPIER.Quaternion(0, Math.sin(this.model.heading / 2), 0, Math.cos(this.model.heading / 2)),
-      true,
-    );
 
     this.speed = this.telemetry.speed;
     this.driftAngle = this.telemetry.driftAngle;

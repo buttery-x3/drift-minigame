@@ -25,8 +25,6 @@ export interface VehicleSurface {
 }
 
 export interface VehicleState {
-  x: number;
-  z: number;
   heading: number;
   vx: number;
   vz: number;
@@ -60,10 +58,8 @@ export const defaultVehicleSurface: VehicleSurface = {
   angularDamping: 1,
 };
 
-export function createVehicleState(x = 0, z = 0, heading = 0): VehicleState {
+export function createVehicleState(heading = 0): VehicleState {
   return {
-    x,
-    z,
     heading,
     vx: 0,
     vz: 0,
@@ -128,11 +124,8 @@ export function stepVehiclePhysics(
   state.yawRate += (targetYawRate - state.yawRate) * yawResponse;
   state.yawRate *= Math.max(0, 1 - tuning.angularDamping * surface.angularDamping * dt);
 
-  state.heading += state.yawRate * dt;
   state.vx = forwardX * forwardSpeed + rightX * lateralSpeed;
   state.vz = forwardZ * forwardSpeed + rightZ * lateralSpeed;
-  state.x += state.vx * dt;
-  state.z += state.vz * dt;
 
   const driftAngle =
     speed > 0.5 ? Math.atan2(lateralSpeed, Math.max(Math.abs(forwardSpeed), 0.001)) : 0;
