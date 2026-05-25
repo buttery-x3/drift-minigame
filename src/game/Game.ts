@@ -137,13 +137,17 @@ export class Game {
       this.cameraRig.cycleMode();
     }
 
-    this.physics.step(delta, () => this.vehicle.fixedUpdate(this.input, this.physics.fixedStep));
+    const physicsSteps = this.physics.step(delta, () =>
+      this.vehicle.fixedUpdate(this.input, this.physics.fixedStep),
+    );
     this.vehicle.sync();
     for (const cone of this.cones) {
       cone.sync();
     }
     this.race.update(this.vehicle.mesh.position, delta);
-    this.cameraRig.update(this.vehicle, delta);
+    if (physicsSteps > 0) {
+      this.cameraRig.update(this.vehicle, this.physics.fixedStep * physicsSteps);
+    }
     this.updateHud();
     if (this.physicsDebug) {
       this.physics.updateDebug(this.scene);

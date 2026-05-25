@@ -14,12 +14,15 @@ export class PhysicsWorld {
   }
 
   step(delta: number, onFixedStep?: () => void) {
+    let steps = 0;
     this.accumulator += Math.min(delta, 0.1);
     while (this.accumulator >= this.fixedStep) {
       onFixedStep?.();
       this.world.step();
       this.accumulator -= this.fixedStep;
+      steps += 1;
     }
+    return steps;
   }
 
   clear() {

@@ -71,8 +71,8 @@ describe('VehiclePhysics', () => {
 
     simulate(state, 1, { throttle: true, brake: false, steer: 1 });
 
-    expect(state.heading).toBeGreaterThan(0.25);
-    expect(state.heading).toBeLessThan(1.2);
+    expect(state.yawRate).toBeGreaterThan(0.25);
+    expect(state.yawRate).toBeLessThan(1.2);
   });
 
   it('steering does very little at a standstill', () => {
@@ -80,7 +80,16 @@ describe('VehiclePhysics', () => {
 
     simulate(state, 1, { throttle: false, brake: false, steer: 1 });
 
-    expect(Math.abs(state.heading)).toBeLessThan(0.01);
+    expect(Math.abs(state.yawRate)).toBeLessThan(0.01);
+  });
+
+  it('does not integrate position or heading because Rapier owns body transforms', () => {
+    const state = createVehicleState(0.4);
+    const initialHeading = state.heading;
+
+    simulate(state, 2, { throttle: true, brake: false, steer: 1 });
+
+    expect(state.heading).toBe(initialHeading);
   });
 
   it('low lateral grip surfaces preserve more sideways slip', () => {
