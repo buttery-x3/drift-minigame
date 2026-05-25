@@ -23,6 +23,7 @@ export class PhysicsWorld {
   }
 
   clear() {
+    this.accumulator = 0;
     this.world.forEachCollider((collider) => {
       this.world.removeCollider(collider, true);
     });
@@ -46,5 +47,17 @@ export class PhysicsWorld {
 
     this.debugLines.geometry.dispose();
     this.debugLines.geometry = geometry;
+  }
+
+  hideDebug(scene: THREE.Scene) {
+    if (!this.debugLines) return;
+    scene.remove(this.debugLines);
+    this.debugLines.geometry.dispose();
+    if (Array.isArray(this.debugLines.material)) {
+      this.debugLines.material.forEach((material) => material.dispose());
+    } else {
+      this.debugLines.material.dispose();
+    }
+    this.debugLines = undefined;
   }
 }

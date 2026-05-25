@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import type { TrackData } from './TrackTypes';
 
 export class TrackColliders {
+  private readonly wallOffset = 4.5;
+
   constructor(
     private world: RAPIER.World,
     private track: TrackData,
@@ -17,8 +19,13 @@ export class TrackColliders {
     for (let i = 0; i < this.track.samples.length; i += 4) {
       const sample = this.track.samples[i];
       const next = this.track.samples[(i + 4) % this.track.samples.length];
-      const a = side === 'left' ? sample.left : sample.right;
-      const b = side === 'left' ? next.left : next.right;
+      const sideDirection = side === 'left' ? 1 : -1;
+      const a = (side === 'left' ? sample.left : sample.right)
+        .clone()
+        .addScaledVector(sample.normal, sideDirection * this.wallOffset);
+      const b = (side === 'left' ? next.left : next.right)
+        .clone()
+        .addScaledVector(next.normal, sideDirection * this.wallOffset);
       this.createWallSegment(a, b);
     }
   }
