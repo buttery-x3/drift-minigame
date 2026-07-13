@@ -5,7 +5,9 @@ export type ControlAction =
   | 'right'
   | 'reset'
   | 'regenerate'
-  | 'camera';
+  | 'camera'
+  | 'confirm'
+  | 'back';
 
 const keyMap = new Map<string, ControlAction>([
   ['ArrowUp', 'throttle'],
@@ -19,6 +21,8 @@ const keyMap = new Map<string, ControlAction>([
   ['KeyR', 'reset'],
   ['KeyT', 'regenerate'],
   ['KeyC', 'camera'],
+  ['Enter', 'confirm'],
+  ['Escape', 'back'],
 ]);
 
 export class Input {

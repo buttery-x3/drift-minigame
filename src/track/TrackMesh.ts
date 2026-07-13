@@ -1,22 +1,34 @@
 import * as THREE from 'three';
 import type { TrackData } from './TrackTypes';
 
+interface TrackMeshOptions {
+  mode?: 'preview' | 'race';
+  showSegmentOverlay?: boolean;
+}
+
 export class TrackMesh {
   readonly group = new THREE.Group();
   readonly road: THREE.Mesh;
 
-  constructor(track: TrackData) {
+  constructor(track: TrackData, options: TrackMeshOptions = {}) {
+    const mode = options.mode ?? 'race';
     this.road = this.createRoad(track);
-    this.group.add(this.createGround());
+    this.group.add(this.createGround(track));
     this.group.add(this.road);
     this.group.add(this.createEdges(track));
-    this.group.add(this.createOilZones(track));
-    this.group.add(this.createCheckpoints(track));
+    this.group.add(this.createStartLine(track));
+    if (mode === 'race') {
+      this.group.add(this.createOilZones(track));
+      this.group.add(this.createCheckpoints(track));
+    }
+    if (options.showSegmentOverlay) {
+      this.group.add(this.createSegmentOverlay(track));
+    }
   }
 
   dispose() {
     this.group.traverse((obj) => {
-      if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {
+      if (obj instanceof THREE.Mesh || obj instanceof THREE.Line) {
         obj.geometry.dispose();
         if (Array.isArray(obj.material)) {
           obj.material.forEach((m) => m.dispose());
@@ -27,11 +39,17 @@ export class TrackMesh {
     });
   }
 
-  private createGround() {
-    const geometry = new THREE.PlaneGeometry(420, 420, 1, 1);
+  private createGround(track: TrackData) {
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    track.bounds.getSize(size);
+    track.bounds.getCenter(center);
+    const geometry = new THREE.PlaneGeometry(size.x + 1000, size.z + 1000, 1, 1);
     geometry.rotateX(-Math.PI / 2);
     const material = new THREE.MeshLambertMaterial({ color: 0x3c6f45 });
     const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.x = center.x;
+    mesh.position.z = center.z;
     mesh.position.y = -0.04;
     return mesh;
   }
@@ -46,7 +64,7 @@ export class TrackMesh {
       const sample = track.samples[i];
       vertices.push(sample.left.x, roadY, sample.left.z);
       vertices.push(sample.right.x, roadY, sample.right.z);
-      uvs.push(0, i / 8, 1, i / 8);
+      uvs.push(0, sample.distanceAlongTrack / 16, 1, sample.distanceAlongTrack / 16);
     }
 
     for (let i = 0; i < track.samples.length; i += 1) {
@@ -121,6 +139,49 @@ export class TrackMesh {
       mesh.position.y = 0.04;
       mesh.rotation.y = Math.atan2(checkpoint.tangent.x, checkpoint.tangent.z);
       group.add(mesh);
+    }
+    return group;
+  }
+
+  private createStartLine(track: TrackData) {
+    const sample = track.samples[0];
+    const geometry = new THREE.PlaneGeometry(track.roadWidth, 2.5);
+    geometry.rotateX(-Math.PI / 2);
+    const material = new THREE.MeshBasicMaterial({ color: 0xf5f0df });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(sample.center);
+    mesh.position.y = 0.13;
+    mesh.rotation.y = Math.atan2(sample.tangent.x, sample.tangent.z);
+    return mesh;
+  }
+
+  private createSegmentOverlay(track: TrackData) {
+    const group = new THREE.Group();
+    for (let segmentIndex = 0; segmentIndex < track.segments.length; segmentIndex += 1) {
+      const segment = track.segments[segmentIndex];
+      const points = track.samples
+        .filter((sample) => sample.sourceSegmentIndex === segmentIndex)
+        .map((sample) => new THREE.Vector3(sample.center.x, 0.2, sample.center.z));
+      const nextSegmentSample = track.samples.find(
+        (sample) => sample.sourceSegmentIndex === (segmentIndex + 1) % track.segments.length,
+      );
+      if (nextSegmentSample) {
+        points.push(new THREE.Vector3(nextSegmentSample.center.x, 0.2, nextSegmentSample.center.z));
+      }
+      if (points.length < 2) continue;
+
+      const color =
+        segment.type === 'straight'
+          ? segment.long
+            ? 0xffd166
+            : 0xe9ecef
+          : segment.closing
+            ? 0xc77dff
+            : segment.classification === 'tight'
+              ? 0xff6b6b
+              : 0x4cc9f0;
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      group.add(new THREE.Line(geometry, new THREE.LineBasicMaterial({ color })));
     }
     return group;
   }

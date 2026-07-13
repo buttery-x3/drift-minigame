@@ -1,6 +1,4 @@
 import GUI from 'lil-gui';
-import type { CameraRig } from '../game/CameraRig';
-import type { TrackGenerator } from '../track/TrackGenerator';
 import type { VehicleTuning } from '../vehicle/VehicleController';
 
 export class DebugGui {
@@ -14,8 +12,6 @@ export class DebugGui {
       cycleCamera: () => void;
       togglePhysicsDebug: () => void;
     },
-    _cameraRig: CameraRig,
-    _trackGenerator: TrackGenerator,
     onTuningChange: () => void,
   ) {
     const car = this.gui.addFolder('Car');
@@ -30,12 +26,17 @@ export class DebugGui {
 
     const controls = this.gui.addFolder('Actions');
     controls.add(actions, 'reset').name('Reset car');
-    controls.add(actions, 'regenerate').name('New track');
+    controls.add(actions, 'regenerate').name('Track generator');
     controls.add(actions, 'cycleCamera').name('Camera mode');
     controls.add(actions, 'togglePhysicsDebug').name('Physics debug');
   }
 
   dispose() {
     this.gui.destroy();
+  }
+
+  setVisible(visible: boolean) {
+    if (visible) this.gui.show();
+    else this.gui.hide();
   }
 }

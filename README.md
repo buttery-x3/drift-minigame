@@ -5,6 +5,8 @@ A browser-based drifting racing prototype built with Three.js and Rapier. The pr
 ## Current Prototype
 
 - Procedurally generated closed circuit
+- Top-down track workshop with seeded segment generation
+- Configurable corner angles, radii, and long straights
 - Three.js low-poly scene rendering
 - Rapier physics world
 - Custom arcade drift vehicle controller
@@ -21,8 +23,10 @@ A browser-based drifting racing prototype built with Three.js and Rapier. The pr
 - `A` / `ArrowLeft`: steer left
 - `D` / `ArrowRight`: steer right
 - `R`: reset car
-- `T`: generate a new track
+- `T`: generate the next seed in the track workshop / return to the workshop while racing
 - `C`: cycle camera mode
+- `Enter`: race the previewed track
+- `Escape`: return to the track workshop
 
 ## Development
 
@@ -54,12 +58,11 @@ npm run preview
 
 The first pass intentionally uses a custom arcade driving model on top of Rapier rigid bodies instead of a full raycast vehicle simulation. This keeps the drift feel tunable while still using Rapier for collisions, cones, barriers, and future surface interactions.
 
-Tracks are generated from smooth closed curves, sampled into reusable data for road mesh generation, checkpoint placement, surface zones, and physics boundaries.
+Tracks are assembled from exact straight and constant-radius corner segments. The generator tracks accumulated heading, reserves a tangent-continuous closing section, and rejects candidates that overlap or cannot reconnect cleanly. The resulting circuit is sampled into reusable data for road mesh generation, checkpoint placement, surface zones, and physics boundaries.
 
 ## Near-Term Ideas
 
-- Improve track generation rejection/scoring
-- Add seeded track entry in the UI
+- Save and share track recipes
 - Add start/finish line handling
 - Improve drift scoring and combo logic
 - Add skid marks, tire smoke, and sound
