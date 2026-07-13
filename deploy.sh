@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+# Run from the repository root regardless of where this script is invoked.
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 git pull --ff-only
 npm ci
