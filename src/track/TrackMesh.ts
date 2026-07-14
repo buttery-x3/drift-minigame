@@ -1,5 +1,13 @@
 import * as THREE from 'three';
+import {
+  WALL_HEIGHT,
+  WALL_THICKNESS,
+  createTrackBoundarySegments,
+} from './TrackBoundaries';
 import type { TrackData } from './TrackTypes';
+
+export const ROAD_SURFACE_Y = 0.08;
+export const TRACK_OVERLAY_Y = 0.1;
 
 interface TrackMeshOptions {
   mode?: 'preview' | 'race';
@@ -18,6 +26,7 @@ export class TrackMesh {
     this.group.add(this.createEdges(track));
     this.group.add(this.createStartLine(track));
     if (mode === 'race') {
+      this.group.add(this.createWalls(track));
       this.group.add(this.createOilZones(track));
       this.group.add(this.createCheckpoints(track));
     }
@@ -58,12 +67,11 @@ export class TrackMesh {
     const vertices: number[] = [];
     const indices: number[] = [];
     const uvs: number[] = [];
-    const roadY = 0.08;
 
     for (let i = 0; i < track.samples.length; i += 1) {
       const sample = track.samples[i];
-      vertices.push(sample.left.x, roadY, sample.left.z);
-      vertices.push(sample.right.x, roadY, sample.right.z);
+      vertices.push(sample.left.x, ROAD_SURFACE_Y, sample.left.z);
+      vertices.push(sample.right.x, ROAD_SURFACE_Y, sample.right.z);
       uvs.push(0, sample.distanceAlongTrack / 16, 1, sample.distanceAlongTrack / 16);
     }
 
@@ -105,6 +113,25 @@ export class TrackMesh {
     );
   }
 
+  private createWalls(track: TrackData) {
+    const segments = createTrackBoundarySegments(track);
+    const geometry = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, 1);
+    const material = new THREE.MeshLambertMaterial({ color: 0xd7cbb5 });
+    const mesh = new THREE.InstancedMesh(geometry, material, segments.length);
+    const transform = new THREE.Object3D();
+
+    segments.forEach((segment, index) => {
+      transform.position.set(segment.midpoint.x, WALL_HEIGHT / 2, segment.midpoint.z);
+      transform.rotation.set(0, segment.angle, 0);
+      transform.scale.set(1, 1, segment.length);
+      transform.updateMatrix();
+      mesh.setMatrixAt(index, transform.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.name = 'circuit-walls';
+    return mesh;
+  }
+
   private createOilZones(track: TrackData) {
     const group = new THREE.Group();
     const material = new THREE.MeshBasicMaterial({
@@ -118,7 +145,8 @@ export class TrackMesh {
       geometry.rotateX(-Math.PI / 2);
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.copy(zone.center);
-      mesh.position.y = 0.03;
+      mesh.position.y = TRACK_OVERLAY_Y;
+      mesh.name = 'oil-zone';
       group.add(mesh);
     }
     return group;
@@ -136,7 +164,7 @@ export class TrackMesh {
       geometry.rotateX(-Math.PI / 2);
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.copy(checkpoint.position);
-      mesh.position.y = 0.04;
+      mesh.position.y = TRACK_OVERLAY_Y;
       mesh.rotation.y = Math.atan2(checkpoint.tangent.x, checkpoint.tangent.z);
       group.add(mesh);
     }
